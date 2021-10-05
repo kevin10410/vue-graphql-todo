@@ -1,28 +1,76 @@
 <template>
-  <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+  <div id="app" class="todoapp stack-large">
+    <h1>Vue GraphQL Todo</h1>
+    <Form/>
+    <div class="filters btn-group stack-exception">
+      <FilterButton
+        v-for="filterName in filterNames"
+        :key="filterName"
+        :name="filterName"
+        :isPressed="filterName === filter"
+        @filterUpdated="filterUpdatedHandler"
+      />
+    </div>
+    <h2 id="list-heading">
+      {{ remainingTasksNumber }} tasks remaining
+    </h2>
+    <TaskList
+      :tasks="tasks"
+      :error="queryError"
+      :loading="queryLoading"
+    />
   </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue';
+import Form from '@/components/Form.vue';
+import TaskList from '@/components/TaskList/index.vue';
+import FilterButton from '@/components/FilterButton.vue';
+
+const FILTER_MAP = {
+  All: () => true,
+  Active: (task) => !task.completed,
+  Completed: (task) => task.completed,
+};
 
 export default {
   name: 'App',
+  data() {
+    return {
+      name: '',
+      filter: 'All',
+      queryData: {
+        queryTask: [],
+      },
+      queryError: null,
+      queryLoading: false,
+    };
+  },
+  computed: {
+    filterNames() {
+      return Object.keys(FILTER_MAP);
+    },
+    tasks() {
+      return this.queryData?.queryTask
+        .filter(FILTER_MAP[this.filter]);
+    },
+    remainingTasksNumber() {
+      if (this.queryLoading || this.queryError) return 0;
+
+      return this.queryData.queryTask
+        .filter(({ completed }) => completed === false)
+        .length;
+    },
+  },
+  methods: {
+    filterUpdatedHandler(filter) {
+      this.filter = filter;
+    },
+  },
   components: {
-    HelloWorld,
+    Form,
+    TaskList,
+    FilterButton,
   },
 };
 </script>
-
-<style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-}
-</style>
