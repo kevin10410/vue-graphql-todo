@@ -1,5 +1,7 @@
 import Vue from 'vue';
 import App from './App.vue';
+import '@/library/fontawesome';
+import '@/index.css';
 
 Vue.config.productionTip = false;
 
