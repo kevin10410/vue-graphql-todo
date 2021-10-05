@@ -23,13 +23,12 @@
         <button class="btn btn__primary todo-edit"
           type="submit"
           :disabled="updateLoading || newName === ''"
-          @click="updateTitleHandler"
         >
           <FontAwesomeIcon
             v-if="updateLoading"
             pulse
             size="1x"
-            icon={faSpinner}
+            :icon="['fas', 'spinner']"
           />
           <span v-else>Save</span>
         </button>
@@ -49,7 +48,7 @@
           v-if="updateLoading"
           pulse
           size="lg"
-          icon={faSpinner}
+          :icon="['fas', 'spinner']"
         />
         </div>
         <div class="btn-group">
@@ -69,7 +68,7 @@
               v-if="deleteLoading"
               pulse
               size="lg"
-              icon={faSpinner}
+              :icon="['fas', 'spinner']"
             />
             <span v-else>Delete</span>
           </button>
@@ -79,6 +78,7 @@
 </template>
 <script>
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { DELETE_TASK, UPDATE_TASK, QUERY_TASK } from '@/graphql/query';
 
 export default {
   name: 'Task',
@@ -89,12 +89,95 @@ export default {
     name: {
       type: String,
     },
+    completed: {
+      type: Boolean,
+    },
   },
   data() {
     return {
       newName: '',
       isEditing: false,
+      updateLoading: false,
+      deleteLoading: false,
     };
+  },
+  methods: {
+    submitNewName(e) {
+      e.preventDefault();
+      this.updateLoading = true;
+      this.$apollo.mutate({
+        mutation: UPDATE_TASK,
+        variables: {
+          id: this.id,
+          title: this.newName,
+          completed: this.completed,
+        },
+        update: (cache) => {
+          const { queryTask } = cache.readQuery({ query: QUERY_TASK });
+          const index = queryTask.findIndex((task) => task.id === this.id);
+          queryTask[index].title = this.newName;
+          cache.writeQuery({
+            query: QUERY_TASK,
+            data: { queryTask },
+          });
+        },
+      }).then(() => {
+        this.newName = '';
+        this.isEditing = false;
+        this.updateLoading = false;
+      }).catch((error) => {
+        console.log(error);
+        this.updateLoading = false;
+      });
+    },
+    completedToggleHandler() {
+      this.updateLoading = true;
+      this.$apollo.mutate({
+        mutation: UPDATE_TASK,
+        variables: {
+          id: this.id,
+          title: this.name,
+          completed: !this.completed,
+        },
+        update: (cache) => {
+          const { queryTask } = cache.readQuery({ query: QUERY_TASK });
+          const index = queryTask.findIndex((task) => task.id === this.id);
+          queryTask[index].completed = !this.completed;
+          cache.writeQuery({
+            query: QUERY_TASK,
+            data: { queryTask },
+          });
+        },
+      }).then(() => {
+        this.updateLoading = false;
+      }).catch((error) => {
+        console.log(error);
+        this.updateLoading = false;
+      });
+    },
+    deleteTaskHandler() {
+      this.deleteLoading = true;
+      this.$apollo.mutate({
+        mutation: DELETE_TASK,
+        variables: {
+          id: this.id,
+        },
+        update: (cache, { data: { deleteTask } }) => {
+          const { queryTask } = cache.readQuery({ query: QUERY_TASK });
+          cache.writeQuery({
+            query: QUERY_TASK,
+            data: {
+              queryTask: queryTask.filter((task) => task.id !== deleteTask.task[0].id),
+            },
+          });
+        },
+      }).then(() => {
+        this.deleteLoading = false;
+      }).catch((error) => {
+        console.log(error);
+        this.deleteLoading = false;
+      });
+    },
   },
   components: {
     FontAwesomeIcon,
