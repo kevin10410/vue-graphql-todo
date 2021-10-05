@@ -16,13 +16,14 @@
     </h2>
     <TaskList
       :tasks="tasks"
-      :error="queryError"
-      :loading="queryLoading"
+      :error="$apollo.queries.queryTask.error"
+      :loading="$apollo.queries.queryTask.loading"
     />
   </div>
 </template>
 
 <script>
+import gql from 'graphql-tag';
 import Form from '@/components/Form.vue';
 import TaskList from '@/components/TaskList/index.vue';
 import FilterButton from '@/components/FilterButton.vue';
@@ -39,25 +40,32 @@ export default {
     return {
       name: '',
       filter: 'All',
-      queryData: {
-        queryTask: [],
-      },
+      queryTask: [],
       queryError: null,
-      queryLoading: false,
     };
+  },
+  apollo: {
+    queryTask: gql`query {
+      queryTask {
+        id
+        title
+        completed
+      }
+    }`,
   },
   computed: {
     filterNames() {
       return Object.keys(FILTER_MAP);
     },
     tasks() {
-      return this.queryData?.queryTask
+      return this.queryTask
         .filter(FILTER_MAP[this.filter]);
     },
     remainingTasksNumber() {
-      if (this.queryLoading || this.queryError) return 0;
+      const { error, loading } = this.$apollo.queries.queryTask;
+      if (loading || error) return 0;
 
-      return this.queryData.queryTask
+      return this.queryTask
         .filter(({ completed }) => completed === false)
         .length;
     },
