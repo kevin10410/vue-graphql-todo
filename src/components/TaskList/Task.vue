@@ -131,28 +131,38 @@ export default {
       });
     },
     completedToggleHandler() {
-      this.updateLoading = true;
+      const completed = !this.completed;
       this.$apollo.mutate({
         mutation: UPDATE_TASK,
         variables: {
           id: this.id,
           title: this.name,
-          completed: !this.completed,
+          completed,
         },
-        update: (cache) => {
+        update: (cache, { data: { updateTask } }) => {
+          const [updatedTask] = updateTask.task;
           const { queryTask } = cache.readQuery({ query: QUERY_TASK });
           const index = queryTask.findIndex((task) => task.id === this.id);
-          queryTask[index].completed = !this.completed;
+          queryTask[index] = updatedTask;
           cache.writeQuery({
             query: QUERY_TASK,
             data: { queryTask },
           });
         },
-      }).then(() => {
-        this.updateLoading = false;
+        optimisticResponse: {
+          __typename: 'Mutation',
+          updateTask: {
+            task: [{
+              __typename: 'Task',
+              id: this.id,
+              title: this.name,
+              completed,
+            }],
+            __typename: 'UpdateTaskPayload',
+          },
+        },
       }).catch((error) => {
         console.log(error);
-        this.updateLoading = false;
       });
     },
     deleteTaskHandler() {

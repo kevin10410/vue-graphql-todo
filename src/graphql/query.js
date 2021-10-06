@@ -35,7 +35,11 @@ export const DELETE_TASK = gql`
 export const UPDATE_TASK = gql`
   mutation updateTask($id: [ID!], $title: String, $completed: Boolean) {
     updateTask(input: {filter: {id: $id}, set: {title: $title, completed: $completed}}) {
-      numUids
+      task {
+        id
+        title
+        completed
+      }
     }
   }
 `;
