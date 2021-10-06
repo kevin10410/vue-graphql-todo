@@ -1,7 +1,13 @@
 <template>
   <div id="app" class="todoapp stack-large">
     <h1>Vue GraphQL Todo</h1>
-    <Form/>
+    <Form
+      :name="name"
+      :error="addTaskError"
+      :loading="addTaskLoading"
+      @addTask="addTaskHandler"
+      @inputChanged="inputChangedHandler"
+    />
     <div class="filters btn-group stack-exception">
       <FilterButton
         v-for="filterName in filterNames"
@@ -16,8 +22,8 @@
     </h2>
     <TaskList
       :tasks="tasks"
-      :error="queryError"
-      :loading="queryLoading"
+      :error="$apollo.queries.queryTask.error"
+      :loading="$apollo.queries.queryTask.loading"
     />
   </div>
 </template>
@@ -26,6 +32,7 @@
 import Form from '@/components/Form.vue';
 import TaskList from '@/components/TaskList/index.vue';
 import FilterButton from '@/components/FilterButton.vue';
+import { QUERY_TASK, ADD_TASK } from '@/graphql/query';
 
 const FILTER_MAP = {
   All: () => true,
@@ -39,25 +46,30 @@ export default {
     return {
       name: '',
       filter: 'All',
-      queryData: {
-        queryTask: [],
-      },
+      queryTask: [],
       queryError: null,
-      queryLoading: false,
+      addTaskError: null,
+      addTaskLoading: false,
     };
+  },
+  apollo: {
+    queryTask: {
+      query: QUERY_TASK,
+    },
   },
   computed: {
     filterNames() {
       return Object.keys(FILTER_MAP);
     },
     tasks() {
-      return this.queryData?.queryTask
+      return this.queryTask
         .filter(FILTER_MAP[this.filter]);
     },
     remainingTasksNumber() {
-      if (this.queryLoading || this.queryError) return 0;
+      const { error, loading } = this.$apollo.queries.queryTask;
+      if (loading || error) return 0;
 
-      return this.queryData.queryTask
+      return this.queryTask
         .filter(({ completed }) => completed === false)
         .length;
     },
@@ -65,6 +77,32 @@ export default {
   methods: {
     filterUpdatedHandler(filter) {
       this.filter = filter;
+    },
+    inputChangedHandler(e) {
+      const { value } = e.target;
+      this.name = value;
+    },
+    addTaskHandler() {
+      this.addTaskError = null;
+      this.addTaskLoading = true;
+      this.$apollo.mutate({
+        mutation: ADD_TASK,
+        variables: {
+          title: this.name,
+        },
+        update: (cache, { data: { addTask } }) => {
+          const data = cache.readQuery({ query: QUERY_TASK });
+          const { task } = addTask;
+          data.queryTask.push(task[0]);
+          cache.writeQuery({ data, query: QUERY_TASK });
+        },
+      }).then(() => {
+        this.name = '';
+        this.addTaskLoading = false;
+      }).catch((error) => {
+        this.addTaskError = error;
+        this.addTaskLoading = false;
+      });
     },
   },
   components: {

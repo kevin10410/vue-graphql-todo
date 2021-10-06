@@ -49,6 +49,7 @@ export default {
   methods: {
     submitHandler(e) {
       e.preventDefault();
+      this.$emit('addTask');
     },
   },
   components: {
