@@ -1,6 +1,6 @@
 <template>
   <div class="taskListWrapper">
-    <p v-if="props">Error...</p>
+    <p v-if="error">Error...</p>
     <p v-else-if="loading">Loading...</p>
     <ul v-else
       class="todo-list stack-large stack-exception"
